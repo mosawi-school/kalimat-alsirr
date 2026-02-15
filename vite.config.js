@@ -3,5 +3,5 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/kalimat-alsirr/',
+  base: process.env.VITE_BASE || '/',
 })
