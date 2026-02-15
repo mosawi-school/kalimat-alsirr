@@ -1,0 +1,111 @@
+    const handleLetterClick = (letter) => {
+        // Check if already selected
+        if (selectedLetters.find(l => l.letter === letter)) {
+            return;
+        }
+
+        // Block if modal is showing
+        if (showQuestionModal || showAnswerModal || showQuestionPrep) {
+            return;
+        }
+
+        // ✅ Reset states for new selection
+        setSelectedCard(null);
+        setPreparedQuestion(null);
+        setShowQuestionPrep(false);
+        setIsCardSelectionLocked(false);
+
+        // ✅ Identify current team's free tries
+        const currentFreeTries = currentTeam === 1 ? team1FreeTries : team2FreeTries;
+
+        // ✅ Capture current values BEFORE any setState
+        const wasNotFree = currentFreeTries === 0;
+        const currentAttemptsLeft = ghashniAttemptsLeft;
+        const currentWrongCount = ghashniWrongCount;
+        const isGhashniMode = ghashniInProgress;
+        
+        const normalizedLetter = letter
+            .replace(/[أإآ]/g, 'ا')
+            .replace(/ة/g, 'ه')
+            .replace(/[\u064B-\u065F]/g, '');
+        
+        const positions = findLetterPositions(letter, match.shuffled_letters);
+
+        // ✅ Consume free try (always, even in ghashni)
+        if (currentFreeTries > 0) {
+            if (currentTeam === 1) {
+                setTeam1FreeTries(prev => prev - 1);
+            } else {
+                setTeam2FreeTries(prev => prev - 1);
+            }
+        }
+        
+        // ✅ Consume ghashni attempt
+        let newAttemptsLeft = currentAttemptsLeft;
+        if (isGhashniMode) {
+            newAttemptsLeft = currentAttemptsLeft - 1;
+            setGhashniAttemptsLeft(prev => prev - 1);
+        }
+
+        if (positions.length > 0) {
+            // ========= Correct Letter =========
+            
+            // +1 point
+            if (currentTeam === 1) {
+                setTeam1Score(prev => prev + 1);
+            } else {
+                setTeam2Score(prev => prev + 1);
+            }
+
+            setSelectedLetters(prev => [...prev, { letter, status: 'correct' }]);
+            setRevealedPositions(prev => [...prev, ...positions]);
+            setTimerSeconds(INITIAL_TIMER_SECONDS);
+
+            const question = matchQuestions[normalizedLetter];
+            if (question) {
+                setPreparedQuestion(question);
+                setShowQuestionPrep(true);
+            } else {
+                // No auto-finish - just handle turn
+                handleNoQuestion(newAttemptsLeft, isGhashniMode);
+            }
+            
+        } else {
+            // ========= Wrong Letter =========
+            
+            setSelectedLetters(prev => [...prev, { letter, status: 'wrong' }]);
+
+            if (isGhashniMode) {
+                // During ghashni
+                const newWrongCount = currentWrongCount + 1;
+                setGhashniWrongCount(prev => prev + 1);
+                
+                if (newAttemptsLeft === 0) {
+                    // Ghashni ended
+                    // ✅ Deduct -1 ONLY if both wrong AND not free
+                    if (newWrongCount === 2 && wasNotFree) {
+                        if (currentTeam === 1) {
+                            setTeam1Score(prev => prev - 1);
+                        } else {
+                            setTeam2Score(prev => prev - 1);
+                        }
+                    }
+                    resetGhashni();
+                    switchTurn();
+                }
+                // else: Still has attempt - don't switch turn
+                
+            } else {
+                // Not ghashni - normal wrong letter
+                // ✅ Deduct -1 only if not free
+                if (wasNotFree) {
+                    if (currentTeam === 1) {
+                        setTeam1Score(prev => prev - 1);
+                    } else {
+                        setTeam2Score(prev => prev - 1);
+                    }
+                }
+                switchTurn();
+            }
+        }
+    };

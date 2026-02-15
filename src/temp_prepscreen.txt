@@ -1,0 +1,146 @@
+    // Question Preparation Screen Component
+    const QuestionPrepScreen = () => {
+        if (!showQuestionPrep || !preparedQuestion) return null;
+        
+        const currentTeamCards = currentTeam === 1 ? team1Cards : team2Cards;
+        const canUseCards = !ghashniInProgress;
+        
+        return (
+            <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.9)',
+                display: 'grid',
+                placeItems: 'center',
+                zIndex: 1000,
+                padding: 16
+            }}>
+                <div style={{
+                    maxWidth: 600,
+                    width: '100%',
+                    background: '#111',
+                    borderRadius: 16,
+                    padding: 32,
+                    border: '2px solid #fbbf24'
+                }}>
+                    <div style={{
+                        fontSize: 48,
+                        textAlign: 'center',
+                        marginBottom: 16
+                    }}>⚡</div>
+                    
+                    <h2 style={{
+                        fontSize: 24,
+                        fontWeight: 700,
+                        textAlign: 'center',
+                        marginBottom: 24,
+                        color: '#fbbf24'
+                    }}>
+                        تحضير السؤال - حرف "{preparedQuestion.letter}"
+                    </h2>
+                    
+                    {ghashniInProgress && (
+                        <div style={{
+                            padding: 12,
+                            background: '#7c3aed',
+                            borderRadius: 8,
+                            marginBottom: 24,
+                            textAlign: 'center',
+                            fontSize: 16,
+                            fontWeight: 600
+                        }}>
+                            🎴 غششني نشط - لا يمكن استخدام كروت
+                        </div>
+                    )}
+                    
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: 12,
+                        marginBottom: 24,
+                        direction: 'rtl'
+                    }}>
+                        <button
+                            disabled={isCardSelectionLocked || !canUseCards || !currentTeamCards.double}
+                            onClick={() => setSelectedCard('double')}
+                            style={{
+                                padding: '16px',
+                                background: selectedCard === 'double' ? '#3b82f6' : 
+                                           (!canUseCards || !currentTeamCards.double) ? '#374151' : '#1f2937',
+                                color: (!canUseCards || !currentTeamCards.double) ? '#6b7280' : '#fff',
+                                border: selectedCard === 'double' ? '2px solid #60a5fa' : '1px solid #4b5563',
+                                borderRadius: 8,
+                                fontSize: 16,
+                                fontWeight: 600,
+                                cursor: (!canUseCards || !currentTeamCards.double || isCardSelectionLocked) ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            ×2 ادبل
+                            {!currentTeamCards.double && ' ✓'}
+                        </button>
+                        
+                        <button
+                            disabled={isCardSelectionLocked || !canUseCards || !currentTeamCards.hole}
+                            onClick={() => setSelectedCard('hole')}
+                            style={{
+                                padding: '16px',
+                                background: selectedCard === 'hole' ? '#ef4444' : 
+                                           (!canUseCards || !currentTeamCards.hole) ? '#374151' : '#1f2937',
+                                color: (!canUseCards || !currentTeamCards.hole) ? '#6b7280' : '#fff',
+                                border: selectedCard === 'hole' ? '2px solid #f87171' : '1px solid #4b5563',
+                                borderRadius: 8,
+                                fontSize: 16,
+                                fontWeight: 600,
+                                cursor: (!canUseCards || !currentTeamCards.hole || isCardSelectionLocked) ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            🕳️ حفرة
+                            {!currentTeamCards.hole && ' ✓'}
+                        </button>
+                        
+                        <button
+                            disabled={isCardSelectionLocked}
+                            onClick={() => setSelectedCard(null)}
+                            style={{
+                                gridColumn: '1 / -1',
+                                padding: '12px',
+                                background: selectedCard === null ? '#10b981' : '#1f2937',
+                                color: '#fff',
+                                border: selectedCard === null ? '2px solid #34d399' : '1px solid #4b5563',
+                                borderRadius: 8,
+                                fontSize: 14,
+                                fontWeight: 600,
+                                cursor: isCardSelectionLocked ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            بدون كرت (+2 عادي)
+                        </button>
+                    </div>
+                    
+                    <button
+                        onClick={handleShowQuestion}
+                        style={{
+                            width: '100%',
+                            padding: '16px 32px',
+                            background: '#fbbf24',
+                            color: '#111',
+                            border: 'none',
+                            borderRadius: 12,
+                            fontSize: 18,
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                        }}
+                    >
+                        اظهر السؤال
+                    </button>
+                </div>
+            </div>
+        );
+    };
+

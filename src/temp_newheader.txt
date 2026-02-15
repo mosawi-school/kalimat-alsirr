@@ -1,0 +1,155 @@
+                    {/* Header */}
+                    <header style={{
+                        marginBottom: 32
+                    }}>
+                        {/* Scores and Free Tries */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 16,
+                            gap: 16
+                        }}>
+                            {/* Team 1 */}
+                            <div style={{
+                                flex: 1,
+                                padding: 16,
+                                background: currentTeam === 1 ? '#1e3a8a' : '#1f2937',
+                                borderRadius: 12,
+                                border: currentTeam === 1 ? '2px solid #3b82f6' : '1px solid #374151'
+                            }}>
+                                <div style={{
+                                    fontSize: 18,
+                                    fontWeight: 700,
+                                    color: '#3b82f6',
+                                    marginBottom: 8
+                                }}>{match.team1_name}</div>
+                                <div style={{
+                                    fontSize: 32,
+                                    fontWeight: 700
+                                }}>{team1Score}</div>
+                                <div style={{
+                                    fontSize: 14,
+                                    opacity: 0.7,
+                                    marginTop: 8,
+                                    display: 'flex',
+                                    gap: 8
+                                }}>
+                                    {team1Cards.ghashni && <span>🎴</span>}
+                                    {team1Cards.double && <span>×2</span>}
+                                    {team1Cards.hole && <span>🕳️</span>}
+                                </div>
+                            </div>
+
+                            {/* Center info */}
+                            <div style={{
+                                textAlign: 'center',
+                                padding: 16,
+                                background: '#1f2937',
+                                borderRadius: 12,
+                                minWidth: 150
+                            }}>
+                                <div style={{
+                                    fontSize: 14,
+                                    opacity: 0.7,
+                                    marginBottom: 8
+                                }}>اختيارات مجانية</div>
+                                <div style={{
+                                    fontSize: 32,
+                                    fontWeight: 700,
+                                    color: freeTriesRemaining > 0 ? '#10b981' : '#ef4444'
+                                }}>{freeTriesRemaining}</div>
+                            </div>
+
+                            {/* Team 2 */}
+                            <div style={{
+                                flex: 1,
+                                padding: 16,
+                                background: currentTeam === 2 ? '#78350f' : '#1f2937',
+                                borderRadius: 12,
+                                border: currentTeam === 2 ? '2px solid #f59e0b' : '1px solid #374151'
+                            }}>
+                                <div style={{
+                                    fontSize: 18,
+                                    fontWeight: 700,
+                                    color: '#f59e0b',
+                                    marginBottom: 8
+                                }}>{match.team2_name}</div>
+                                <div style={{
+                                    fontSize: 32,
+                                    fontWeight: 700
+                                }}>{team2Score}</div>
+                                <div style={{
+                                    fontSize: 14,
+                                    opacity: 0.7,
+                                    marginTop: 8,
+                                    display: 'flex',
+                                    gap: 8
+                                }}>
+                                    {team2Cards.ghashni && <span>🎴</span>}
+                                    {team2Cards.double && <span>×2</span>}
+                                    {team2Cards.hole && <span>🕳️</span>}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Timer and Turn indicator */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 16,
+                            marginBottom: 16
+                        }}>
+                            <div style={{ fontSize: 24, fontWeight: 700 }}>⏱️ {formatTimer(timerSeconds)}</div>
+                            <div style={{
+                                padding: '8px 16px',
+                                background: currentTeam === 1 ? '#3b82f6' : '#f59e0b',
+                                borderRadius: 8,
+                                fontSize: 16,
+                                fontWeight: 600
+                            }}>
+                                دور: {currentTeam === 1 ? match.team1_name : match.team2_name}
+                                {ghashniInProgress && ` 🎴 (${ghashniAttemptsLeft})`}
+                            </div>
+                            <button
+                                onClick={handleRevealWord}
+                                disabled={!checkAllLettersRevealed()}
+                                style={{
+                                    padding: '8px 16px',
+                                    background: checkAllLettersRevealed() ? '#ef4444' : '#374151',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: 8,
+                                    fontSize: 14,
+                                    fontWeight: 600,
+                                    cursor: checkAllLettersRevealed() ? 'pointer' : 'not-allowed',
+                                    opacity: checkAllLettersRevealed() ? 1 : 0.5
+                                }}
+                            >
+                                كشف كلمة السر
+                            </button>
+                        </div>
+
+                        {/* Ghashni button */}
+                        <button
+                            onClick={handleActivateGhashni}
+                            disabled={ghashniInProgress || !(currentTeam === 1 ? team1Cards : team2Cards).ghashni}
+                            style={{
+                                width: '100%',
+                                padding: '12px 24px',
+                                background: ghashniInProgress ? '#10b981' : 
+                                           (currentTeam === 1 ? team1Cards : team2Cards).ghashni ? '#7c3aed' : '#374151',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: 8,
+                                fontSize: 16,
+                                fontWeight: 600,
+                                cursor: (ghashniInProgress || !(currentTeam === 1 ? team1Cards : team2Cards).ghashni) ? 'not-allowed' : 'pointer',
+                                opacity: (ghashniInProgress || !(currentTeam === 1 ? team1Cards : team2Cards).ghashni) ? 0.5 : 1
+                            }}
+                        >
+                            🎴 غششني {ghashniInProgress && `(${ghashniAttemptsLeft} محاولات متبقية)`}
+                            {!(currentTeam === 1 ? team1Cards : team2Cards).ghashni && ' ✓ مستخدم'}
+                        </button>
+                    </header>
