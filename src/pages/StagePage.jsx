@@ -474,6 +474,7 @@ export default function StagePage() {
     const [ghashniWrongCount, setGhashniWrongCount] = useState(0);
     const [wrongAnimatingLetter, setWrongAnimatingLetter] = useState(null);
     const [turnSwitchAnimating, setTurnSwitchAnimating] = useState(false);
+    const committingRef = useRef(false);
 
     // Turn Switch Pulse Effect
     useEffect(() => {
@@ -512,9 +513,7 @@ export default function StagePage() {
         // Increment score for the winner to break the tie visually and logically
         if (teamId === 1) setTeam1Score(prev => prev + 1);
         else setTeam2Score(prev => prev + 1);
-
-        // Auto-commit on tie break
-        handleCommitMatch();
+        // handleCommitMatch call removed - now handled by useEffect
     };
 
     // Load Data
@@ -769,8 +768,7 @@ export default function StagePage() {
 
     const handleRevealWord = () => {
         setGameState(GAME_STATES.FINISHED);
-        // Auto-commit on reveal
-        handleCommitMatch();
+        // handleCommitMatch call removed - now handled by useEffect
     };
 
     // Modal Transitions
@@ -855,19 +853,20 @@ export default function StagePage() {
 
     // MATCH COMMIT LOGIC
     const handleCommitMatch = async () => {
-        // High-level guards to prevent double-commit or redundant calls
-        if (!matchId || processing || match?.committed_at || match?.status === 'finished') {
-            console.log('Commit skipped: Already processing or match already finished.', {
-                matchId, processing, status: match?.status, committedAt: match?.committed_at
-            });
+        // 1. HIGH LEVEL GUARDS
+        if (!matchId || committingRef.current || match?.committed_at || match?.status === 'finished') {
             return;
         }
 
-        const seasonId = match.season_id;
+        // 2. LOCK
+        committingRef.current = true;
         setProcessing(true);
 
+        const seasonId = match.season_id;
+        console.log('--- STARTING MATCH COMMIT ---');
+
         try {
-            // Calculate Winner to persist
+            // A. CALCULATE WINNER
             let winnerName = null;
             if (tieBreakWinner) {
                 winnerName = tieBreakWinner === 1 ? match.team1_name : match.team2_name;
@@ -877,24 +876,49 @@ export default function StagePage() {
                 else winnerName = 'Tie';
             }
 
+            // B. UPDATE MATCH (STEP 1)
             const updatePayload = {
                 status: 'finished',
                 winner: winnerName,
                 committed_at: new Date().toISOString()
             };
 
+            console.log('Step 1: Updating matches table...', updatePayload);
             const { error: statusError } = await supabase
                 .from('matches')
                 .update(updatePayload)
                 .eq('id', matchId);
 
-            if (statusError) throw statusError;
+            if (statusError) {
+                console.error('Step 1 FAIL: Update matches error details:', {
+                    message: statusError.message,
+                    details: statusError.details,
+                    hint: statusError.hint,
+                    code: statusError.code
+                });
+                throw statusError;
+            }
+            console.log('Step 1 SUCCESS: Match status updated.');
 
-            // 2. Track Used Questions
-            const questionIds = Object.values(matchQuestions)
+            // C. FETCH QUESTION IDS IF NEEDED
+            let questionIds = Object.values(matchQuestions)
                 .map(q => q.id || q.question_id)
                 .filter(id => id != null);
 
+            if (questionIds.length === 0) {
+                console.log('State questions empty, fetching from DB...');
+                const { data: dbQuestions, error: fetchQError } = await supabase
+                    .from('match_questions')
+                    .select('question_id')
+                    .eq('match_id', matchId);
+
+                if (!fetchQError && dbQuestions) {
+                    questionIds = dbQuestions.map(q => q.question_id).filter(id => id != null);
+                    console.log(`Fetched ${questionIds.length} questions from DB.`);
+                }
+            }
+
+            // D. UPSERT USED QUESTIONS (STEP 2)
             if (seasonId && questionIds.length > 0) {
                 const usedQuestionsPayload = questionIds.map(qId => ({
                     season_id: seasonId,
@@ -902,36 +926,58 @@ export default function StagePage() {
                     match_id: matchId
                 }));
 
+                console.log('Step 2: Upserting season_used_questions...', usedQuestionsPayload);
                 const { error: usedError } = await supabase
                     .from('season_used_questions')
                     .upsert(usedQuestionsPayload, { onConflict: 'season_id, question_id', ignoreDuplicates: true });
 
                 if (usedError) {
-                    console.error('Error inserting used questions details:', {
+                    console.error('Step 2 FAIL: Upsert used questions error details:', {
                         message: usedError.message,
                         details: usedError.details,
                         hint: usedError.hint,
                         code: usedError.code
                     });
+                } else {
+                    console.log('Step 2 SUCCESS: Used questions recorded.');
                 }
+            } else {
+                console.log('Step 2 SKIP: No season_id or questionIds found.');
             }
 
-            // Sync local state to reflect committed status
+            // E. SYNC LOCAL STATE
             setMatch(prev => ({ ...prev, status: 'finished', committed_at: updatePayload.committed_at }));
 
         } catch (err) {
-            console.error('Error committing match details:', {
+            console.error('CRITICAL COMMIT ERROR:', {
                 message: err.message,
                 details: err.details,
                 hint: err.hint,
                 code: err.code,
-                fullError: err
+                full: err
             });
             alert('حدث خطأ أثناء إنهاء المباراة. الرجاء المحاولة مرة أخرى.');
         } finally {
             setProcessing(false);
+            // We keep committingRef.current = true for safety unless you want to retry?
+            // User requested to stop after this, so we lock it.
         }
     };
+
+    // SINGLE TRIGGER FOR COMMIT
+    useEffect(() => {
+        if (gameState === GAME_STATES.FINISHED && matchId) {
+            // Check if we need to wait for tieBreak (if scores are equal)
+            const isTie = team1Score === team2Score;
+            if (isTie && !tieBreakWinner) {
+                console.log('Game finished but waiting for tie-break selection.');
+                return;
+            }
+
+            console.log('Auto-triggering commit from useEffect hook.');
+            handleCommitMatch();
+        }
+    }, [gameState, tieBreakWinner, matchId]);
 
     // Rows for Keyboard (fixed layout)
     const row1 = ["ا", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ذ", "ر", "ز", "س", "ش", "ص"];
