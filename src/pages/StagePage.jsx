@@ -584,6 +584,7 @@ export default function StagePage() {
 
     // Card Activation
     const handleToggleDouble = () => {
+        if (ghashniInProgress) return;
         // Toggle logic for Double in Modal
         // If already active, deactivate. If not, activate.
         // Also check if team has it.
@@ -626,6 +627,7 @@ export default function StagePage() {
     // So distinct states: Indentory vs Active-for-this-turn.
 
     const togglePreQuestionCard = (type) => { // 'hole' or 'double'
+        if (ghashniInProgress) return;
         const team = currentTeam;
         const hasCard = team === 1 ? team1Cards[type] : team2Cards[type];
 
@@ -1219,11 +1221,12 @@ export default function StagePage() {
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: 12 }}>
-                                <PowerCard type="double" used={!team1Cards.double} />
-                                <PowerCard type="hole" used={!team1Cards.hole} />
+                                <PowerCard type="double" used={!team1Cards.double || ghashniInProgress} />
+                                <PowerCard type="hole" used={!team1Cards.hole || ghashniInProgress} />
                                 <PowerCard
                                     type="ghashni"
-                                    used={!team1Cards.ghashni}
+                                    used={!team1Cards.ghashni || (ghashniInProgress && currentTeam === 2)}
+                                    isActive={ghashniInProgress && currentTeam === 1}
                                     onClick={currentTeam === 1 ? handleActivateGhashni : undefined}
                                 />
                             </div>
@@ -1256,11 +1259,13 @@ export default function StagePage() {
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: 12, flexDirection: 'row-reverse' }}>
-                                <PowerCard type="double" used={!team2Cards.double} />
-                                <PowerCard type="hole" used={!team2Cards.hole} />
+                                <PowerCard type="double" used={!team2Cards.double || ghashniInProgress} />
+                                <PowerCard type="hole" used={!team2Cards.hole || ghashniInProgress} />
                                 <PowerCard
                                     type="ghashni"
-                                    used={!team2Cards.ghashni}
+                                    used={!team2Cards.ghashni || (ghashniInProgress && currentTeam === 1)}
+                                    isActive={ghashniInProgress && currentTeam === 2}
+                                    onClick={currentTeam === 2 ? handleActivateGhashni : undefined}
                                 />
                             </div>
                         </div>
@@ -1444,7 +1449,7 @@ export default function StagePage() {
                                         <div style={{ textAlign: 'center', opacity: 0.9 }}>
                                             <PowerCard
                                                 type="hole"
-                                                used={!modalTeamCards.hole}
+                                                used={!modalTeamCards.hole || ghashniInProgress}
                                                 isActive={activeHoleActive}
                                                 onClick={() => togglePreQuestionCard('hole')}
                                             />
@@ -1452,7 +1457,7 @@ export default function StagePage() {
                                         <div style={{ textAlign: 'center', opacity: 0.9 }}>
                                             <PowerCard
                                                 type="double"
-                                                used={!modalTeamCards.double}
+                                                used={!modalTeamCards.double || ghashniInProgress}
                                                 isActive={activeDoubleActive}
                                                 onClick={() => togglePreQuestionCard('double')}
                                             />
