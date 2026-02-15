@@ -512,6 +512,9 @@ export default function StagePage() {
         // Increment score for the winner to break the tie visually and logically
         if (teamId === 1) setTeam1Score(prev => prev + 1);
         else setTeam2Score(prev => prev + 1);
+
+        // Auto-commit on tie break
+        handleCommitMatch();
     };
 
     // Load Data
@@ -766,6 +769,8 @@ export default function StagePage() {
 
     const handleRevealWord = () => {
         setGameState(GAME_STATES.FINISHED);
+        // Auto-commit on reveal
+        handleCommitMatch();
     };
 
     // Modal Transitions
@@ -850,25 +855,18 @@ export default function StagePage() {
 
     // MATCH COMMIT LOGIC
     const handleCommitMatch = async () => {
-        if (!matchId || processing) return;
-
-        // If no season ID, we can't track used questions properly, but should still finish match
-        const seasonId = match.season_id;
-        if (!seasonId) {
-            console.warn('No Season ID found, skipping used questions tracking.');
+        // High-level guards to prevent double-commit or redundant calls
+        if (!matchId || processing || match?.committed_at || match?.status === 'finished') {
+            console.log('Commit skipped: Already processing or match already finished.', {
+                matchId, processing, status: match?.status, committedAt: match?.committed_at
+            });
+            return;
         }
 
+        const seasonId = match.season_id;
         setProcessing(true);
 
         try {
-            // 1. Update Match Status -> 'finished'
-            // If we have a tie-break winner, we should ideally save it.
-            // Assuming table has 'winner' column (text or int). Let's optimistically NOT change schema unless needed.
-            // The prompt asks to persist "if there is a winner field".
-            // I'll update 'status' for now. usage of winner field might require schema check. 
-            // BUT, verifying existing code: handleSelectWinner updates LOCAL score but doesn't db save until here? 
-            // Actually handleCommitMatch is the ONLY db save for finish.
-
             // Calculate Winner to persist
             let winnerName = null;
             if (tieBreakWinner) {
@@ -876,12 +874,14 @@ export default function StagePage() {
             } else {
                 if (team1Score > team2Score) winnerName = match.team1_name;
                 else if (team2Score > team1Score) winnerName = match.team2_name;
-                else winnerName = 'Tie'; // Fallback
+                else winnerName = 'Tie';
             }
 
-            const updatePayload = { status: 'finished', winner: winnerName };
-            // If we have a determined winner (score based or tie-break), we could save it if table allows.
-            // For now, minimal scope: just status.
+            const updatePayload = {
+                status: 'finished',
+                winner: winnerName,
+                committed_at: new Date().toISOString()
+            };
 
             const { error: statusError } = await supabase
                 .from('matches')
@@ -890,17 +890,16 @@ export default function StagePage() {
 
             if (statusError) throw statusError;
 
-            // 2. Track Used Questions (if Season ID exists)
-            // Collect all question IDs from matchQuestions (which is a map of Letter -> QuestionObj)
+            // 2. Track Used Questions
             const questionIds = Object.values(matchQuestions)
                 .map(q => q.id || q.question_id)
-                .filter(Boolean);
+                .filter(id => id != null);
 
             if (seasonId && questionIds.length > 0) {
                 const usedQuestionsPayload = questionIds.map(qId => ({
                     season_id: seasonId,
                     question_id: qId,
-                    match_id: matchId // Optional context
+                    match_id: matchId
                 }));
 
                 const { error: usedError } = await supabase
@@ -908,17 +907,28 @@ export default function StagePage() {
                     .upsert(usedQuestionsPayload, { onConflict: 'season_id, question_id', ignoreDuplicates: true });
 
                 if (usedError) {
-                    console.error('Error inserting used questions:', usedError);
-                    // We log but don't block navigation, as match is already finished
+                    console.error('Error inserting used questions details:', {
+                        message: usedError.message,
+                        details: usedError.details,
+                        hint: usedError.hint,
+                        code: usedError.code
+                    });
                 }
             }
 
-            // 3. Success -> Navigate
-            navigate('/join');
+            // Sync local state to reflect committed status
+            setMatch(prev => ({ ...prev, status: 'finished', committed_at: updatePayload.committed_at }));
 
         } catch (err) {
-            console.error('Error committing match:', err);
+            console.error('Error committing match details:', {
+                message: err.message,
+                details: err.details,
+                hint: err.hint,
+                code: err.code,
+                fullError: err
+            });
             alert('حدث خطأ أثناء إنهاء المباراة. الرجاء المحاولة مرة أخرى.');
+        } finally {
             setProcessing(false);
         }
     };
@@ -1151,16 +1161,15 @@ export default function StagePage() {
                         </div>
                     </div>
 
-                    <button onClick={handleCommitMatch} disabled={processing} style={{
+                    <button onClick={() => navigate('/join')} style={{
                         marginTop: 12, padding: '14px 40px',
                         background: 'rgba(255,255,255,0.05)', color: '#fff',
                         border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16,
                         fontSize: '1.1rem', fontWeight: 600,
-                        cursor: processing ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.2s', marginBottom: 8,
-                        opacity: processing ? 0.7 : 1
+                        cursor: 'pointer',
+                        transition: 'all 0.2s', marginBottom: 8
                     }}>
-                        {processing ? 'جارٍ الإنهاء...' : 'مباراة جديدة'}
+                        مباراة جديدة
                     </button>
                 </div>
             </div>
