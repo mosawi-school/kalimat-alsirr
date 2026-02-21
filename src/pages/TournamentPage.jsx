@@ -5,7 +5,22 @@ const TournamentPage = () => {
     // 0-7: Quarterfinals
     // 8-11: Semifinals
     // 12-13: Finals
-    const [slots, setSlots] = useState(Array(14).fill(""));
+    const STORAGE_KEY = "kalimat_tournament_slots_v1";
+
+    const [slots, setSlots] = useState(() => {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length === 14) {
+                    return parsed;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to parse tournament slots", e);
+        }
+        return Array(14).fill("");
+    });
 
     // Edit Modal State
     const [editSlot, setEditSlot] = useState(null); // { index, value, placeholder }
@@ -14,11 +29,21 @@ const TournamentPage = () => {
         const newSlots = [...slots];
         newSlots[index] = value;
         setSlots(newSlots);
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(newSlots));
+        } catch (e) {
+            console.error("Failed to save tournament slots", e);
+        }
     };
 
     const handleReset = () => {
         if (window.confirm("هل أنت متأكد من مسح جميع الأسماء؟")) {
             setSlots(Array(14).fill(""));
+            try {
+                localStorage.removeItem(STORAGE_KEY);
+            } catch (e) {
+                console.error("Failed to clear tournament slots", e);
+            }
         }
     };
 
