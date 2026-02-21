@@ -11,6 +11,7 @@ import StagePage from './pages/StagePage';
 import StageVisualPrototype from './pages/StageVisualPrototype';
 import ProjectGuidePage from './pages/ProjectGuidePage';
 import PublicJoinPage from './pages/PublicJoinPage';
+import TournamentPage from './pages/TournamentPage';
 
 function App() {
   const { isAuthenticated, loading } = useAuth();
@@ -100,6 +101,9 @@ function App() {
 
       {/* Visual Prototype (Temp) */}
       <Route path="/prototype" element={<StageVisualPrototype />} />
+
+      {/* Tournament Page */}
+      <Route path="/tournament" element={<TournamentPage />} />
 
       {/* Catch all - redirect to root */}
       <Route path="*" element={<Navigate to="/" replace />} />

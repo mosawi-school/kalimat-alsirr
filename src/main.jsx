@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import './index.css';
+import './tailwind.css';
 import App from './App.jsx';
 
 // FIX: Redirect plain /admin to hashed /#/admin to support direct links
